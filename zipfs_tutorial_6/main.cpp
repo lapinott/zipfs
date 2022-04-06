@@ -44,7 +44,7 @@ int main(int argc, char** argv) {
 
 	zfs.set_file_encrypt(false);
 	zfs.set_file_encrypt_func(super_secret_encrypt_func);
-	zfs.set_compression(ZIP_CM_STORE, NULL);//https://libzip.org/documentation/zip_set_file_compression.html
+	zfs.set_compression(ZIP_CM_STORE, ZIPFS_ZIP_FLAGS_NONE);//https://libzip.org/documentation/zip_set_file_compression.html
 
 	zipfs_query_result_t qr;
 	ze = zfs.dir_pull_query("/", mirroring, qr, zipfs::OVERWRITE::IF_DATE_OLDER, zipfs::ORPHAN::DELETE_);
