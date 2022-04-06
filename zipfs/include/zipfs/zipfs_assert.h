@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <stdexcept>
 
 #ifdef _DEBUG
 #define zipfs_debug_assert(assertion) zipfs_always_assert(assertion)
