@@ -15,7 +15,7 @@ namespace zipfs {
 		}
 
 		//.>do we have a valid archive? test open/close
-		if (!_zipfs_open(NULL)) {
+		if (!_zipfs_open(ZIPFS_ZIP_FLAGS_NONE)) {
 			ze = m_ze;
 			return;
 		}
@@ -38,7 +38,7 @@ namespace zipfs {
 		}
 
 		//.>do we have a valid archive? test open/close
-		if (!_zipfs_open(NULL)) {
+		if (!_zipfs_open(ZIPFS_ZIP_FLAGS_NONE)) {
 			ze = m_ze;
 			return;
 		}
@@ -249,7 +249,7 @@ namespace zipfs {
 		zipfs_internal_assert(zipfs_path.is_dir());
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return false;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -258,7 +258,7 @@ namespace zipfs {
 			return false;
 		}
 
-		if (zip_file_set_mtime(m_zip_t, index, mtime, NULL) == -1) {
+		if (zip_file_set_mtime(m_zip_t, index, mtime, ZIPFS_ZIP_FLAGS_NONE) == -1) {
 			_zipfs_zip_get_error_and_close(zipfs_path, "");
 			return false;
 		}
@@ -275,7 +275,7 @@ namespace zipfs {
 			return m_ze;
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -333,7 +333,7 @@ namespace zipfs {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -395,7 +395,7 @@ namespace zipfs {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -421,7 +421,7 @@ namespace zipfs {
 			return m_ze;
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -448,7 +448,7 @@ namespace zipfs {
 		zipfs_usage_assert(zipfs_path.is_dir(), ZIPFS_ERRSTR_DIRECTORY_PATH_EXPECTED);
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		std::vector<std::string> tree = zipfs_path.tree();
@@ -482,7 +482,7 @@ namespace zipfs {
 			return m_ze;
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		delete_count = 0;
@@ -517,7 +517,7 @@ namespace zipfs {
 			return m_ze;
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		for (zipfs_path_t& p : ls_) {
@@ -568,7 +568,7 @@ namespace zipfs {
 				return m_ze;
 			}
 			else {
-				zip_file_t* file = zip_fopen_index(m_zip_t, index, /*ZIPFS_FL_ENC*/ 0 | (read_compressed ? ZIP_FL_COMPRESSED : NULL));
+				zip_file_t* file = zip_fopen_index(m_zip_t, index, /*ZIPFS_FL_ENC*/ 0 | (read_compressed ? ZIP_FL_COMPRESSED : ZIPFS_ZIP_FLAGS_NONE));
 				if (file == nullptr) {
 					_zipfs_zip_get_error_and_close(zipfs_path, "");
 					return m_ze;
@@ -658,7 +658,7 @@ namespace zipfs {
 		else {
 			zip_stat_t stat;
 			zip_stat_init(&stat);
-			if (zip_stat_index(m_zip_t, index, NULL, &stat) == -1) {
+			if (zip_stat_index(m_zip_t, index, ZIPFS_ZIP_FLAGS_NONE, &stat) == -1) {
 				_zipfs_zip_get_error_and_close(zipfs_path, "");
 				return m_ze;
 			}
@@ -686,7 +686,7 @@ namespace zipfs {
 			_zipfs_open(ZIP_RDONLY))
 			return m_ze;
 
-		result = zip_get_num_entries(m_zip_t, NULL);
+		result = zip_get_num_entries(m_zip_t, ZIPFS_ZIP_FLAGS_NONE);
 		if (result == -1) {//archive is null
 			_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_ARCHIVE_IS_NULL, "/", "");
 			return m_ze;

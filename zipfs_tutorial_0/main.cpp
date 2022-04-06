@@ -3,8 +3,6 @@
 
 	zipfs_path_t & filesystem_path_t
 */
-#pragma once
-
 #include <zipfs/zipfs_path_t.h>
 #include <zipfs/zipfs_filesystem_path_t.h>
 

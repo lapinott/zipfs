@@ -429,7 +429,7 @@ namespace zipfs {
 			return m_ze;
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);
@@ -476,7 +476,7 @@ namespace zipfs {
 		{
 			if (m_file_encrypt && m_file_encrypt_func != nullptr) {//zip_source_buffer was used
 				time_t fs_mtime = fs_path.last_write_time();
-				if (zip_file_set_mtime(m_zip_t, index, fs_mtime, NULL) == -1) {
+				if (zip_file_set_mtime(m_zip_t, index, fs_mtime, ZIPFS_ZIP_FLAGS_NONE) == -1) {
 					_zipfs_zip_get_error_and_close(zipfs_path, "");
 					return m_ze;
 				}
@@ -498,7 +498,7 @@ namespace zipfs {
 		}
 
 		if (!
-			_zipfs_open(NULL))
+			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
 			return m_ze;
 
 		zip_int64_t index = _zipfs_name_locate(zipfs_path);

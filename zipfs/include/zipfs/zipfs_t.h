@@ -13,6 +13,7 @@
 
 #define ZIPFS_USE_ZIPFS_INDEX 1
 #define ZIPFS_FL_ENC ZIP_FL_ENC_UTF_8
+#define ZIPFS_ZIP_FLAGS_NONE (zip_flags_t)0
 
 namespace zipfs {
 
