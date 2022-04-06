@@ -1,0 +1,20 @@
+#pragma once
+
+namespace zipfs {
+
+	enum class OVERWRITE {
+		NEVER, ALWAYS,
+		IF_DATE_OLDER, IF_SIZE_MISMATCH, IF_DATE_OLDER_AND_SIZE_MISMATCH
+	};
+
+	enum class ORPHAN {
+		KEEP, DELETE_ //.>underscore cos winnt.h ...
+	};
+
+	enum class QUERY_RESULT {
+		FILE_WRITE, FILE_OVERWRITE, FILE_DONT_OVERWRITE,
+		FILE_ORPHAN_KEEP, FILE_ORPHAN_DELETE,
+		DIR_ADD, DIR_ALREADY_EXISTS,
+		DIR_ORPHAN_KEEP, DIR_ORPHAN_DELETE
+	};
+}
