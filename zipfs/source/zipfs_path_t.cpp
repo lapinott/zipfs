@@ -2,7 +2,8 @@
 #include <zipfs/zipfs_assert.h>
 #include <util/split.h>
 #include <filesystem>
-#include <exception>
+#include <algorithm>
+#include <cstring>
 
 namespace zipfs {
 
