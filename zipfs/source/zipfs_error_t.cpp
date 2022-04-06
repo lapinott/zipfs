@@ -1,5 +1,6 @@
 #include <zipfs/zipfs_error_t.h>
 #include <zipfs/zipfs_assert.h>
+#include <cstring>
 
 namespace zipfs {
 

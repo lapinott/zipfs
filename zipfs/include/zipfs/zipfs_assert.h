@@ -13,10 +13,10 @@
 
 namespace zipfs {
 
-	struct zipfs_internal_error_t : public std::exception {
+	struct zipfs_internal_error_t : public std::logic_error {
 	public:
 
-		zipfs_internal_error_t() : std::exception{ "zipfs internal error." } {}
+		zipfs_internal_error_t() : std::logic_error{ "zipfs internal error." } {}
 	};
 }
 #define zipfs_internal_assert(assertion) if (!(assertion)) throw zipfs::zipfs_internal_error_t();
@@ -24,10 +24,10 @@ namespace zipfs {
 
 namespace zipfs {
 
-	struct zipfs_usage_error_t : public std::exception {
+	struct zipfs_usage_error_t : public std::invalid_argument {
 	public:
 
-		zipfs_usage_error_t(const char* message) : std::exception{ message } {}
+		zipfs_usage_error_t(const char* message) : std::invalid_argument{ message } {}
 	};
 }
 #define zipfs_usage_assert(assertion, message) if (!(assertion)) throw zipfs::zipfs_usage_error_t(message);
