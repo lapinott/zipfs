@@ -1,18 +1,22 @@
 #include <zipfs/zipfs_index_t.h>
 #include <zipfs/zipfs_assert.h>
 
+#define ZIPFS_FL_ENC ZIP_FL_ENC_UTF_8
+#define ZIPFS_ZIP_FLAGS_NONE (zip_flags_t)0
+//todo cancel duplicate
+
 namespace zipfs {
 
 	bool zipfs_index_t::init(zip_t* z) {
 		zipfs_internal_assert(z != nullptr);
 		zipfs_internal_assert(m_map.empty());
 
-		zip_int64_t num_entries = zip_get_num_entries(z, NULL);
+		zip_int64_t num_entries = zip_get_num_entries(z, ZIPFS_ZIP_FLAGS_NONE);
 		if (num_entries == -1)
 			return false;
 
 		for (zip_int64_t e = 0; e < num_entries; e++) {
-			const char* name = zip_get_name(z, e, ZIP_FL_ENC_GUESS);
+			const char* name = zip_get_name(z, e, ZIPFS_FL_ENC);
 			if (name == nullptr)
 				zipfs_internal_assert(false);
 
@@ -23,12 +27,12 @@ namespace zipfs {
 	}
 
 	bool zipfs_index_t::verify(zip_t* z) const {
-		zip_int64_t num_entries = zip_get_num_entries(z, NULL);
+		zip_int64_t num_entries = zip_get_num_entries(z, ZIPFS_ZIP_FLAGS_NONE);
 		if (num_entries == -1 || num_entries != m_map.size())
 			return false;
 
 		for (zip_int64_t e = 0; e < num_entries; e++) {
-			const char* name = zip_get_name(z, e, ZIP_FL_ENC_GUESS);
+			const char* name = zip_get_name(z, e, ZIPFS_FL_ENC);
 			if (name == nullptr)
 				zipfs_internal_assert(false);
 
