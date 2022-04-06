@@ -5,6 +5,7 @@
 #include <zipfs/zipfs_filesystem_path_t.h>
 #include <vector>
 #include <string>
+#include <tuple>
 
 namespace zipfs {
 
