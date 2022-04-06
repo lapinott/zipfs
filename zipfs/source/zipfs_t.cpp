@@ -559,7 +559,7 @@ namespace zipfs {
 		else {
 			zip_stat_t stat;
 			zip_stat_init(&stat);
-			if (zip_stat_index(m_zip_t, index, NULL, &stat) == -1) {
+			if (zip_stat_index(m_zip_t, index, ZIPFS_ZIP_FLAGS_NONE, &stat) == -1) {
 				_zipfs_zip_get_error_and_close(zipfs_path, "");
 				return m_ze;
 			}
