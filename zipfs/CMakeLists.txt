@@ -24,5 +24,7 @@ target_include_directories(zipfs PUBLIC "include")
 target_include_directories(zipfs PUBLIC "${ZLIB_INCLUDE_DIR}")
 target_include_directories(zipfs PUBLIC "${LIBZIP_DIR}")
 target_include_directories(zipfs PUBLIC "${LIBZIP_INCLUDE_DIR}")
+target_include_directories(zipfs PUBLIC "${LIBZIP_CONFIG_H_DIR}")
+
 target_include_directories(zipfs PUBLIC "${BOOST_DIR}")
 target_include_directories(zipfs PUBLIC "${UTIL_INCLUDE_DIR}")
