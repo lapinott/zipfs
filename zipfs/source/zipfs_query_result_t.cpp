@@ -14,6 +14,13 @@ namespace zipfs {
 		++m_result_count;
 	}
 
+	void zipfs_query_result_t::clear() {
+		m_result_query_result.clear();
+		m_result_zipfs_path.clear();
+		m_result_fs_path.clear();
+		m_result_count = 0;
+	}
+
 	size_t zipfs_query_result_t::size() const {
 		zipfs_internal_assert(
 			m_result_count == m_result_query_result.size() &&
@@ -23,22 +30,25 @@ namespace zipfs {
 		return m_result_count;
 	}
 
-	void zipfs_query_result_t::clear() {
-		m_result_query_result.clear();
-		m_result_zipfs_path.clear();
-		m_result_fs_path.clear();
-		m_result_count = 0;
+	zipfs_query_result_t zipfs_query_result_t::get(const QUERY_RESULTS_GET what) const {
+		zipfs_query_result_t qr;
+		auto data_ = data(what);
+		for (size_t r = 0; r < size(); r++)
+			qr.push_back(std::get<0>(data_[r]), std::get<1>(data_[r]), std::get<2>(data_[r]));
+
+		return qr;
 	}
 
-	std::vector<std::tuple<QUERY_RESULT, zipfs_path_t, filesystem_path_t>> zipfs_query_result_t::get_results() const {
+	std::vector<std::tuple<QUERY_RESULT, zipfs_path_t, filesystem_path_t>> zipfs_query_result_t::data(const QUERY_RESULTS_GET what) const {
 		std::vector<std::tuple<QUERY_RESULT, zipfs_path_t, filesystem_path_t>> results;
 		for (size_t r = 0; r < size(); r++) {
-			results.emplace_back(m_result_query_result[r], m_result_zipfs_path[r], m_result_fs_path[r]);
+			if (m_result_query_result[r] & what)
+				results.emplace_back(m_result_query_result[r], m_result_zipfs_path[r], m_result_fs_path[r]);
 		}
 		return results;
 	}
 
-	zipfs_query_result_t::operator std::string() const {
+	std::string zipfs_query_result_t::to_string() const {
 		std::ostringstream oss;
 		for (size_t r = 0; r < size(); r++) {
 			std::string QUERY_RESULT_str;
@@ -66,7 +76,7 @@ namespace zipfs {
 	}
 
 	std::ostream& operator<<(std::ostream& os, const zipfs_query_result_t& qr) {
-		os << (std::string)qr;
+		os << qr.to_string();
 		return os;
 	}
 }

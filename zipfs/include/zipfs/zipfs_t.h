@@ -7,13 +7,12 @@
 #include <zipfs/zipfs_enums.h>
 #include <zipfs/zipfs_query_result_t.h>
 #include <zipfs/zipfs_index_t.h>
+#include <zipfs/zipfs_zip_flags.h>
 #include <zip.h>
 #include <vector>
 #include <map>
 
 #define ZIPFS_USE_ZIPFS_INDEX 1
-#define ZIPFS_FL_ENC ZIP_FL_ENC_UTF_8
-#define ZIPFS_ZIP_FLAGS_NONE (zip_flags_t)0
 
 namespace zipfs {
 

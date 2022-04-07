@@ -162,7 +162,7 @@ namespace zipfs {
 	orphans:
 		{
 			std::vector<zipfs_path_t> ls_;
-			if (!ls(zipfs_path, ls_))
+			if (!ls(zipfs_path, ls_, false))
 				return false;
 
 			//files first
@@ -270,7 +270,7 @@ namespace zipfs {
 	extract:
 		{
 			std::vector<zipfs_path_t> ls_;
-			if (!ls(zipfs_path, ls_))
+			if (!ls(zipfs_path, ls_, false))
 				return false;
 
 			std::vector<std::pair<filesystem_path_t, time_t>>

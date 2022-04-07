@@ -12,6 +12,8 @@ namespace zipfs {
 	class zipfs_query_result_t { //a container for query results
 	private:
 
+		friend struct zipfs_t;
+
 		std::vector<QUERY_RESULT>
 			m_result_query_result;
 
@@ -24,19 +26,21 @@ namespace zipfs {
 		size_t
 			m_result_count;
 
+		void push_back(QUERY_RESULT query_result, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
+
+		void clear();
+
 	public:
 
 		zipfs_query_result_t();
 
-		void push_back(QUERY_RESULT query_result, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
-
 		size_t size() const;
 
-		void clear();
+		zipfs_query_result_t get(const QUERY_RESULTS_GET what) const;
 
-		std::vector<std::tuple<QUERY_RESULT, zipfs_path_t, filesystem_path_t>> get_results() const;
+		std::vector<std::tuple<QUERY_RESULT, zipfs_path_t, filesystem_path_t>> data(const QUERY_RESULTS_GET what = QUERY_RESULTS_GET::ALL) const;
 
-		operator std::string() const;
+		std::string to_string() const;
 	};
 
 	std::ostream& operator<<(std::ostream& os, const zipfs_query_result_t& qr);

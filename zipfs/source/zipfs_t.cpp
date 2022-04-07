@@ -203,7 +203,7 @@ namespace zipfs {
 	bool zipfs_t::_zipfs_file_add_or_pull_from_source(const zipfs_path_t& zipfs_path, zip_source_t* src, zip_int64_t& index) {
 		zipfs_internal_assert(m_zip_t != nullptr);
 
-		if ((index = zip_file_add(m_zip_t, zipfs_path.libzip_path(), src, ZIPFS_FL_ENC)) == -1) {
+		if ((index = zip_file_add(m_zip_t, zipfs_path.libzip_path(), src, ZIPFS_ZIP_FL_ENC)) == -1) {
 			(void)zip_source_free(src);
 			return false;
 		}
@@ -220,7 +220,7 @@ namespace zipfs {
 	bool zipfs_t::_zipfs_file_add_replace_or_pull_replace_from_source(zip_int64_t index, zip_source_t* src) {
 		zipfs_internal_assert(m_zip_t != nullptr);
 
-		if (zip_file_replace(m_zip_t, index, src, ZIPFS_FL_ENC) == -1) {
+		if (zip_file_replace(m_zip_t, index, src, ZIPFS_ZIP_FL_ENC) == -1) {
 			(void)zip_source_free(src);
 			return false;
 		}
@@ -431,7 +431,7 @@ namespace zipfs {
 			return m_ze;
 		}
 
-		int rename = zip_file_rename(m_zip_t, index, zipfs_rename_path.libzip_path(), ZIPFS_FL_ENC);
+		int rename = zip_file_rename(m_zip_t, index, zipfs_rename_path.libzip_path(), ZIPFS_ZIP_FL_ENC);
 		if (rename == -1) {
 			_zipfs_zip_get_error_and_close(zipfs_path, "");
 			return m_ze;
@@ -458,7 +458,7 @@ namespace zipfs {
 			zipfs_internal_assert(dir.is_dir());
 			zip_int64_t index = _zipfs_name_locate(dir);
 			if (index == -1) {
-				if ((index = zip_dir_add(m_zip_t, dir.libzip_path_dir_add().c_str(), ZIPFS_FL_ENC)) == -1) {//zip_dir_add doesn't expect trailing '/'
+				if ((index = zip_dir_add(m_zip_t, dir.libzip_path_dir_add().c_str(), ZIPFS_ZIP_FL_ENC)) == -1) {//zip_dir_add doesn't expect trailing '/'
 					_zipfs_unchange_all();
 					_zipfs_zip_get_error_and_close(dir, "");
 					return m_ze;
@@ -478,7 +478,7 @@ namespace zipfs {
 
 		std::vector<zipfs_path_t> ls_;
 		if (!
-			ls(zipfs_path, ls_))
+			ls(zipfs_path, ls_, false))
 			return m_ze;
 
 		if (!
@@ -513,7 +513,7 @@ namespace zipfs {
 
 		std::vector<zipfs_path_t> ls_;
 		if (!
-			ls(zipfs_path, ls_))
+			ls(zipfs_path, ls_, false))
 			return m_ze;
 
 		if (!
@@ -529,7 +529,7 @@ namespace zipfs {
 			}
 			else {
 				zipfs_path_t rename_path = zipfs_rename_path + p.string().substr(zipfs_path.string().length());
-				if (zip_file_rename(m_zip_t, index, rename_path.libzip_path(), ZIPFS_FL_ENC) == -1) {
+				if (zip_file_rename(m_zip_t, index, rename_path.libzip_path(), ZIPFS_ZIP_FL_ENC) == -1) {
 					_zipfs_unchange_all();
 					_zipfs_zip_get_error_and_close(rename_path, "");
 					return m_ze;
@@ -623,22 +623,18 @@ namespace zipfs {
 			return m_ze;
 
 		result.clear();
-#if 0
-		if (!strict)
-			result.push_back(zipfs_path);
-#endif
 		for (zip_int64_t e = 0; e < num_entries_; e++) {
-			const char* name = zip_get_name(m_zip_t, e, ZIPFS_FL_ENC);
+			const char* name = zip_get_name(m_zip_t, e, ZIPFS_ZIP_FL_ENC);
 			if (name == nullptr) {
 				result.clear();
 				_zipfs_zip_get_error_and_close(zipfs_path, "");
 				return m_ze;
 			}
-#if 0
+
 			std::string name_ = name;
-#endif
-			if (std::string(name).find(zipfs_path.libzip_path()) == 0)
-				result.emplace_back("/" + std::string(name));
+			bool found = name_.find(zipfs_path.libzip_path()) == 0;
+			if (!strict && found || strict && found && name_ != zipfs_path.libzip_path())
+				result.push_back("/" + std::string(name));
 		}
 
 		_zipfs_no_error_and_close();
