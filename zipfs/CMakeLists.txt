@@ -35,7 +35,7 @@ target_include_directories(zipfs PUBLIC "${UTIL_INCLUDE_DIR}")
 #configure file
 set(ZIPFS_ZIP_SOURCE_T_EXTRA_CHECKS 0)
 configure_file("include/zipfs/zipfs_config.h.in" "include/zipfs/zipfs_config.h")
-target_include_directories(zipfs PUBLIC "${PROJECT_BINARY_DIR}")
+target_include_directories(zipfs PUBLIC "${PROJECT_BINARY_DIR}/zipfs/include")
 
 install(TARGETS zipfs LIBRARY DESTINATION lib)
 install(FILES ${ZIPFS_PUBLIC_HEADERS} "include/zipfs/zipfs_config.h" DESTINATION include)
