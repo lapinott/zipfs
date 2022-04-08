@@ -8,6 +8,7 @@
 #include <zipfs/zipfs_query_result_t.h>
 #include <zipfs/zipfs_index_t.h>
 #include <zipfs/zipfs_zip_flags.h>
+#include <zipfs/zipfs_config.h>
 #include <zip.h>
 #include <vector>
 #include <map>

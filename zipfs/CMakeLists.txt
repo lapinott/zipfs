@@ -1,5 +1,4 @@
-#source
-add_library(zipfs STATIC
+set(ZIPFS_PUBLIC_HEADERS
 	"include/zipfs/zipfs.h"
 	"include/zipfs/zipfs_assert.h"
 	"include/zipfs/zipfs_enums.h"
@@ -10,7 +9,9 @@ add_library(zipfs STATIC
 	"include/zipfs/zipfs_path_t.h"
 	"include/zipfs/zipfs_query_result_t.h"
 	"include/zipfs/zipfs_t.h"
-	"include/zipfs/zipfs_zip_stat_t.h"
+	"include/zipfs/zipfs_zip_stat_t.h")
+	
+set(ZIPFS_SOURCE_FILES
 	"source/zipfs.cpp"
 	"source/zipfs_error_t.cpp"
 	"source/zipfs_index_t.cpp"
@@ -19,12 +20,21 @@ add_library(zipfs STATIC
 	"source/zipfs_t.cpp"
 	"source/zipfs_t_filesystem.cpp"
 	"source/zipfs_zip_stat_t.cpp")
+
+#source
+add_library(zipfs STATIC ${ZIPFS_PUBLIC_HEADERS} ${ZIPFS_SOURCE_FILES})
 	
 target_include_directories(zipfs PUBLIC "include")
 target_include_directories(zipfs PUBLIC "${ZLIB_INCLUDE_DIR}")
 target_include_directories(zipfs PUBLIC "${LIBZIP_DIR}")
 target_include_directories(zipfs PUBLIC "${LIBZIP_INCLUDE_DIR}")
 target_include_directories(zipfs PUBLIC "${LIBZIP_CONFIG_H_DIR}")
-
 target_include_directories(zipfs PUBLIC "${BOOST_DIR}")
 target_include_directories(zipfs PUBLIC "${UTIL_INCLUDE_DIR}")
+
+#configure file
+set(ZIPFS_ZIP_SOURCE_T_EXTRA_CHECKS 0)
+configure_file("include/zipfs/zipfs_config.h.in" "include/zipfs/zipfs_config.h")
+
+install(TARGETS zipfs LIBRARY DESTINATION lib)
+install(FILES ${ZIPFS_PUBLIC_HEADERS} DESTINATION include)

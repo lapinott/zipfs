@@ -1,7 +1,9 @@
 #include <zipfs/zipfs_t.h>
 #include <zipfs/zipfs_assert.h>
 #include <zipfs/zipfs_error_strings.h>
+#if ZIPFS_ZIP_SOURCE_T_EXTRA_CHECKS
 #include <zipint.h>//.>zip_source_t
+#endif
 
 namespace zipfs {
 
@@ -83,8 +85,10 @@ namespace zipfs {
 	void zipfs_t::_zipfs_source_free()  {
 		zipfs_internal_assert(m_zip_t == nullptr);
 		zipfs_internal_assert(m_zip_source_t != nullptr);
+#if ZIPFS_ZIP_SOURCE_T_EXTRA_CHECKS
 		zipfs_internal_assert(m_zip_source_t->src == nullptr);
 		zipfs_internal_assert(m_zip_source_t->refcount == 1);
+#endif
 		//si on utilise freep = 0, il faut supprimer le buffer avec delete[] => (mais buggé si archive créée avec WinRar)
 		//si on utilise freep = 1, il faut supprimer le buffer avec zip_source_free() [avec refcount=0]
 #if ZIPFS_ZIP_SOURCE_T_INITIAL_BUFFER_AUTO_FREE == 1
