@@ -16,14 +16,15 @@
 
 namespace zipfs {
 
-	struct zipfs_t { //zip 'heap file-system' interface
+	struct zipfs_t { //zip 'heap' filesystem interface
 	private:
 
 		zip_source_t*
 			m_zip_source_t;
 
 		std::vector<char>
-			m_zip_source_t_image;//image_user/image_internal?
+			m_zip_source_t_image_user,
+			m_zip_source_t_image_internal;
 
 		zip_t*
 			m_zip_t;
@@ -59,13 +60,15 @@ namespace zipfs {
 			m_file_decrypt_func;
 
 		bool
-			m_file_encrypt, m_file_decrypt;
+			m_file_encrypt,
+			m_file_decrypt;
 
 	private:
 
 		zipfs_index_t					//this index because zip_name_locate() is giving me trouble (should be patched in next libzip version [now=26.03.2022])
 			m_zipfs_index_t,			//maps a zipfs_path_t to its corresponding in-archive zip_int64_t index
-			m_zipfs_index_t_image;
+			m_zipfs_index_t_image_user,
+			m_zipfs_index_t_image_internal;
 
 	public:
 
@@ -108,9 +111,11 @@ namespace zipfs {
 		*/
 		void
 			_zipfs_zip_get_error(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
-			_zipfs_zipfs_set_error(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
 			_zipfs_zip_get_error_and_close(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
-			_zipfs_zipfs_set_error_and_close(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
+			_zipfs_zipfs_set_error(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
+			_zipfs_zipfs_set_error_and_close(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
+			_zipfs_zip_source_error(),
+			_zipfs_zip_source_error_and_source_close();
 
 		zip_int64_t
 			_zipfs_name_locate(const zipfs_path_t& zipfs_path);
@@ -133,6 +138,10 @@ namespace zipfs {
 
 		bool
 			_zipfs_set_dir_mtime(const zipfs_path_t& zipfs_path, time_t mtime);
+
+		bool
+			_zipfs_zip_source_t_image_internal_revert_to_image(),
+			_zipfs_zip_source_t_image_internal_update();
 #if 0
 //todo
 		QUERY_RESULT

@@ -34,7 +34,7 @@ namespace zipfs {
 			return;
 		}
 
-		if (!zip_source_t_image_update()) {
+		if (!zip_source_t_image_update() || !_zipfs_zip_source_t_image_internal_update()) {
 			ze = m_ze;
 			return;
 		}
@@ -174,6 +174,11 @@ namespace zipfs {
 		zipfs_internal_assert(m_ze.is_error());
 	}
 
+	void zipfs_t::_zipfs_zip_get_error_and_close(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
+		_zipfs_zip_get_error(zipfs_path, fs_path);
+		_zipfs_close();
+	}
+
 	void zipfs_t::_zipfs_zipfs_set_error(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
 		m_ze = zipfs_error.c_str();
 
@@ -185,14 +190,19 @@ namespace zipfs {
 		zipfs_internal_assert(m_ze.is_error());
 	}
 
-	void zipfs_t::_zipfs_zip_get_error_and_close(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
-		_zipfs_zip_get_error(zipfs_path, fs_path);
-		_zipfs_close();
-	}
-
 	void zipfs_t::_zipfs_zipfs_set_error_and_close(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
 		_zipfs_zipfs_set_error(zipfs_error, zipfs_path, fs_path);
 		_zipfs_close();
+	}
+
+	void zipfs_t::_zipfs_zip_source_error() {
+		m_ze = zip_source_error(m_zip_source_t);
+	}
+
+	void zipfs_t::_zipfs_zip_source_error_and_source_close() {
+		_zipfs_zip_source_error();
+		int close = zip_source_close(m_zip_source_t);
+		zipfs_internal_assert(close != -1);
 	}
 
 	zip_int64_t zipfs_t::_zipfs_name_locate(const zipfs_path_t& zipfs_path) {
@@ -268,6 +278,34 @@ namespace zipfs {
 		}
 
 		_zipfs_no_error_and_close();
+		return true;
+	}
+
+	bool zipfs_t::_zipfs_zip_source_t_image_internal_revert_to_image() {
+		zipfs_internal_assert(m_zip_t == nullptr);
+
+		_zipfs_source_free();
+		if (!
+			_zipfs_source_new(m_zip_source_t_image_internal.data(), m_zip_source_t_image_internal.size()))
+			return false;
+
+		m_zipfs_index_t = m_zipfs_index_t_image_internal;
+
+		return true;
+	}
+
+	bool zipfs_t::_zipfs_zip_source_t_image_internal_update() {
+		zipfs_internal_assert(m_zip_t == nullptr);
+
+		std::vector<char> buf;
+		if (!
+			get_source(buf))
+			return false;
+
+		m_zip_source_t_image_internal.clear();
+		m_zip_source_t_image_internal.assign(buf.data(), buf.data() + buf.size());
+		m_zipfs_index_t_image_internal = m_zipfs_index_t;
+
 		return true;
 	}
 
@@ -594,17 +632,24 @@ namespace zipfs {
 						_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_FILE_CANNOT_CLOSE, zipfs_path, "");
 						return m_ze;
 					}
-					else if (m_file_decrypt && m_file_decrypt_func != nullptr) {//decryption
-						uint8_t* ret_buf = nullptr;
-						size_t ret_len;
-						{
-							m_file_decrypt_func(zipfs_path.c_str(), reinterpret_cast<uint8_t*>(buf.data()), buf.size(), &ret_buf, &ret_len);
-							result.assign(ret_buf, ret_buf + ret_len);
+					else {
+
+						switch (m_file_decrypt && m_file_decrypt_func != nullptr) {
+						case true: {//decryption
+							uint8_t* ret_buf = nullptr;
+							size_t ret_len;
+							{
+								m_file_decrypt_func(zipfs_path.c_str(), reinterpret_cast<uint8_t*>(buf.data()), buf.size(), &ret_buf, &ret_len);
+								result.assign(ret_buf, ret_buf + ret_len);
+							}
+							delete[] ret_buf;
+							break;
 						}
-						delete[] ret_buf;
-					}
-					else {//no decryption
-						result = std::move(buf);
+						case false: {//no decryption
+							result = std::move(buf);
+							break;
+						}
+						}
 					}
 				}
 			}
@@ -698,46 +743,40 @@ namespace zipfs {
 
 	zipfs_error_t zipfs_t::get_source(std::vector<char>& result) {
 		zip_stat_t stat;
+		result = {};
 		if (zip_source_stat(m_zip_source_t, &stat) == -1) {
-			result = {};
-			m_ze = zip_source_error(m_zip_source_t);
+			_zipfs_zip_source_error();
 			return m_ze;
 		}
 		else if (!(stat.valid & ZIP_STAT_SIZE)) {
-			result = {};
 			m_ze = ZIPFS_ERRSTR_SOURCE_STAT_SIZE_NOT_VALID;
 			return m_ze;
 		}
 		else if (stat.size == 0) {
-			result = {};
 			m_ze = zipfs_error_t::no_error();
 			return m_ze;
 		}
 
 		//read source
 		if (zip_source_open(m_zip_source_t) == -1) {
-			result = {};
-			m_ze = zip_source_error(m_zip_source_t);
+			_zipfs_zip_source_error();
 			return m_ze;
 		}
 		else {
 			std::vector<char> buf(stat.size);
 			zip_int64_t read = zip_source_read(m_zip_source_t, buf.data(), stat.size);
 			if (read == -1) {
-				result = {};
-				m_ze = zip_source_error(m_zip_source_t);
-				zip_source_close(m_zip_source_t);//-1 on failure
+				_zipfs_zip_source_error_and_source_close();
 				return m_ze;
 			}
 			else if (read != stat.size) {
-				result = {};
-				m_ze = ZIPFS_ERRSTR_SOURCE_CANNOT_READ_ALL;
-				zip_source_close(m_zip_source_t);//-1 on failure
+				_zipfs_zip_source_error_and_source_close();
 				return m_ze;
 			}
 
 			result = std::move(buf);
-			zip_source_close(m_zip_source_t);//-1 on failure
+			int close = zip_source_close(m_zip_source_t);
+			zipfs_internal_assert(close != -1);
 		}
 
 		return zipfs_error_t::no_error();
@@ -756,12 +795,12 @@ namespace zipfs {
 			return m_ze;
 		}
 		
-		if (buf.size() != m_zip_source_t_image.size()) {
+		if (buf.size() != m_zip_source_t_image_user.size()) {
 			result = true;
 		}
 		else {
 			for (size_t b = 0; b < buf.size(); b++) {
-				if (buf[b] != m_zip_source_t_image[b]) {
+				if (buf[b] != m_zip_source_t_image_user[b]) {
 					result = true;
 					break;
 				}
@@ -775,10 +814,10 @@ namespace zipfs {
 	zipfs_error_t zipfs_t::zip_source_t_revert_to_image() {
 		_zipfs_source_free();
 		if (!
-			_zipfs_source_new(m_zip_source_t_image.data(), m_zip_source_t_image.size()))
+			_zipfs_source_new(m_zip_source_t_image_user.data(), m_zip_source_t_image_user.size()))
 			return m_ze;
 
-		m_zipfs_index_t = m_zipfs_index_t_image;
+		m_zipfs_index_t = m_zipfs_index_t_image_user;
 
 		return zipfs_error_t::no_error();
 	}
@@ -789,9 +828,9 @@ namespace zipfs {
 			get_source(buf))
 			return m_ze;
 
-		m_zip_source_t_image.clear();
-		m_zip_source_t_image.assign(buf.data(), buf.data() + buf.size());
-		m_zipfs_index_t_image = m_zipfs_index_t;
+		m_zip_source_t_image_user.clear();
+		m_zip_source_t_image_user.assign(buf.data(), buf.data() + buf.size());
+		m_zipfs_index_t_image_user = m_zipfs_index_t;
 
 		return zipfs_error_t::no_error();
 	}

@@ -552,13 +552,13 @@ namespace zipfs {
 
 	zipfs_error_t zipfs_t::dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite, ORPHAN orphan) {
 		if (!
-			zip_source_t_image_update())//make source backup
+			_zipfs_zip_source_t_image_internal_update())//make source backup
 			return m_ze;
 
 		if (!
 			_zipfs_dir_pull(zipfs_path, fs_path, nullptr, overwrite, orphan, false)) {
 
-			zip_source_t_revert_to_image();//restore image
+			_zipfs_zip_source_t_image_internal_revert_to_image();//restore image
 			return m_ze;
 		}
 
