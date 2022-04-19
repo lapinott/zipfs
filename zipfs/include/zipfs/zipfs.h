@@ -8,5 +8,5 @@
 namespace zipfs {
 
 	const extern int
-		VERSION, VERSION_MINOR;
+		VERSION, VERSION_MAJOR, VERSION_MINOR;
 }

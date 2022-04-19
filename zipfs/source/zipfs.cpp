@@ -3,5 +3,5 @@
 namespace zipfs {
 
 	const int
-		VERSION = 1, VERSION_MINOR = 16;
+		VERSION = 1, VERSION_MAJOR = 18, VERSION_MINOR = 1;
 }

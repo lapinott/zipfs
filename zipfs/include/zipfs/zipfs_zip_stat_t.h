@@ -5,7 +5,7 @@
 
 namespace zipfs {
 
-	struct zipfs_zip_stat_t { //.>helper class; copy from zip_stat_t with std::string copy
+	struct zipfs_zip_stat_t {//.>helper class; copy from zip_stat_t with std::string copy
 
         zipfs_zip_stat_t();
         zipfs_zip_stat_t(const zip_stat_t& zs);

@@ -5,7 +5,7 @@
 #include <zipfs/zipfs_filesystem_path_t.h>
 #include <zipfs/zipfs_zip_stat_t.h>
 #include <zipfs/zipfs_enums.h>
-#include <zipfs/zipfs_query_result_t.h>
+#include <zipfs/zipfs_query_results_t.h>
 #include <zipfs/zipfs_index_t.h>
 #include <zipfs/zipfs_zip_flags.h>
 #include <zip.h>
@@ -30,12 +30,12 @@ namespace zipfs {
 			m_zip_t;
 
 		char*
-			m_zip_source_t_initial_buffer; //.>null if archive was created empty
+			m_zip_source_t_buffer;
 
-#define ZIPFS_ZIP_SOURCE_T_INITIAL_BUFFER_AUTO_FREE 1 //<.buggy if 0
+#define ZIPFS_ZIP_SOURCE_T_BUFFER_AUTO_FREE 1 //<.buggy if 0
 
 		const static bool
-			s_zip_source_t_initial_buffer_auto_free = ZIPFS_ZIP_SOURCE_T_INITIAL_BUFFER_AUTO_FREE;
+			s_zip_source_t_buffer_auto_free = ZIPFS_ZIP_SOURCE_T_BUFFER_AUTO_FREE;
 
 		zip_int32_t
 			m_compression;
@@ -110,7 +110,7 @@ namespace zipfs {
 			we could return m_ze& here
 		*/
 		void
-			_zipfs_zip_get_error(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
+			_zipfs_zip_get_error(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),//<-on peut supprimer ça.
 			_zipfs_zip_get_error_and_close(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
 			_zipfs_zipfs_set_error(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
 			_zipfs_zipfs_set_error_and_close(const std::string& zipfs_error, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
@@ -127,10 +127,10 @@ namespace zipfs {
 			_zipfs_file_add_replace_or_pull_replace_from_source(zip_int64_t index, zip_source_t* src);
 
 		bool
-			_zipfs_dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_result_t* query_result, OVERWRITE overwrite, ORPHAN orphan, bool is_query);
+			_zipfs_dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t* query_results, OVERWRITE overwrite, ORPHAN orphan, bool is_query);
 
 		bool
-			_zipfs_dir_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_result_t* query_result, OVERWRITE overwrite, bool is_query);
+			_zipfs_dir_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t* query_results, OVERWRITE overwrite, bool is_query);
 
 		bool
 			_zipfs_source_buffer_encrypt(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zip_source_t** src),
@@ -140,14 +140,13 @@ namespace zipfs {
 			_zipfs_set_dir_mtime(const zipfs_path_t& zipfs_path, time_t mtime);
 
 		bool
-			_zipfs_zip_source_t_image_internal_revert_to_image(),
-			_zipfs_zip_source_t_image_internal_update();
-#if 0
-//todo
+			_zipfs_revert_to_image_internal(),
+			_zipfs_image_internal_update();
+
 		QUERY_RESULT
-			_zipfs_get_query_result(OVERWRITE overwrite, ORPHAN orphan, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),//pull
-			_zipfs_get_query_result(OVERWRITE overwrite, ORPHAN orphan, const filesystem_path_t& fs_path, const zipfs_path_t& zipfs_path);//extract
-#endif
+			_zipfs_get_query_result(OVERWRITE overwrite, ORPHAN orphan, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
+			_zipfs_get_query_result(OVERWRITE overwrite, const filesystem_path_t& fs_path, const zipfs_path_t& zipfs_path);
+
 	//\.end internal
 
 
@@ -165,7 +164,7 @@ namespace zipfs {
 			dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite = OVERWRITE::NEVER, ORPHAN orphan = ORPHAN::KEEP);
 
 		zipfs_error_t
-			dir_pull_query(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_result_t& query_result, OVERWRITE overwrite = OVERWRITE::NEVER, ORPHAN orphan = ORPHAN::KEEP);
+			dir_pull_query(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t& query_results, OVERWRITE overwrite = OVERWRITE::NEVER, ORPHAN orphan = ORPHAN::KEEP);
 
 
 	public: //.>read-only operations [->filesystem]
@@ -183,7 +182,7 @@ namespace zipfs {
 			dir_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite = OVERWRITE::NEVER);
 
 		zipfs_error_t
-			dir_extract_query(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_result_t& query_result, OVERWRITE overwrite = OVERWRITE::NEVER);
+			dir_extract_query(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t& query_results, OVERWRITE overwrite = OVERWRITE::NEVER);
 
 
 	public: //.>write operations [<-memory]
@@ -239,14 +238,17 @@ namespace zipfs {
 		zipfs_error_t
 			get_source_ptr(char** buffer, size_t& byte_sz) const;
 #endif
-		zipfs_error_t
-			zip_source_t_has_modifications(bool& result);
+
+	public: //.>image data
 
 		zipfs_error_t
-			zip_source_t_revert_to_image();
+			zipfs_image_has_modifications(bool& result);
 
 		zipfs_error_t
-			zip_source_t_image_update();
+			zipfs_revert_to_image();
+
+		zipfs_error_t
+			zipfs_image_update();
 
 
 	public: //.>compression

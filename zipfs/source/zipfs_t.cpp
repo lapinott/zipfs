@@ -8,7 +8,7 @@
 namespace zipfs {
 
 	zipfs_t::zipfs_t(zipfs_error_t& ze) :
-		m_compression{ ZIP_CM_DEFLATE }, m_compression_flags{ 0 }, m_zip_source_t{ nullptr }, m_zip_t{ nullptr }, m_zip_source_t_initial_buffer{ nullptr }, m_ze{ zipfs_error_t::no_error() },
+		m_compression{ ZIP_CM_DEFLATE }, m_compression_flags{ 0 }, m_zip_source_t{ nullptr }, m_zip_t{ nullptr }, m_zip_source_t_buffer{ nullptr }, m_ze{ zipfs_error_t::no_error() },
 		m_file_encrypt_func{ nullptr }, m_file_decrypt_func{ nullptr }, m_file_encrypt{ false }, m_file_decrypt{ false } {
 
 		if (!_zipfs_source_new(nullptr, 0)) {
@@ -26,7 +26,7 @@ namespace zipfs {
 	}
 
 	zipfs_t::zipfs_t(char* buffer, size_t byte_sz, zipfs_error_t& ze) :
-		m_compression{ ZIP_CM_DEFLATE }, m_compression_flags{ 0 }, m_zip_source_t{ nullptr }, m_zip_t{ nullptr }, m_zip_source_t_initial_buffer{ nullptr }, m_ze{ zipfs_error_t::no_error() },
+		m_compression{ ZIP_CM_DEFLATE }, m_compression_flags{ 0 }, m_zip_source_t{ nullptr }, m_zip_t{ nullptr }, m_zip_source_t_buffer{ nullptr }, m_ze{ zipfs_error_t::no_error() },
 		m_file_encrypt_func{ nullptr }, m_file_decrypt_func{ nullptr }, m_file_encrypt{ false }, m_file_decrypt{ false } {
 
 		if (!_zipfs_source_new(buffer, byte_sz)) {
@@ -34,7 +34,7 @@ namespace zipfs {
 			return;
 		}
 
-		if (!zip_source_t_image_update() || !_zipfs_zip_source_t_image_internal_update()) {
+		if (!zipfs_image_update() || !_zipfs_image_internal_update()) {
 			ze = m_ze;
 			return;
 		}
@@ -55,17 +55,17 @@ namespace zipfs {
 	bool zipfs_t::_zipfs_source_new(char* buffer, size_t byte_sz) {
 		zipfs_internal_assert(m_zip_t == nullptr);
 		zipfs_internal_assert(m_zip_source_t == nullptr);
-		zipfs_internal_assert(m_zip_source_t_initial_buffer == nullptr);
+		zipfs_internal_assert(m_zip_source_t_buffer == nullptr);
 
 		// zip_source_buffer_create https://libzip.org/documentation/zip_source_buffer_create.html
 		// If freep is non-zero, the buffer will be freed when it is no longer needed,
 		// data must remain valid for the lifetime of the created source.
 
 		if (buffer != nullptr && byte_sz != 0) {
-			m_zip_source_t_initial_buffer = new char[byte_sz];//acquire buffer (copy)
-			char* it = std::copy(buffer, buffer + byte_sz, m_zip_source_t_initial_buffer);
-			zipfs_internal_assert(it == m_zip_source_t_initial_buffer + byte_sz);
-			zip_source_t* zs = zip_source_buffer_create(m_zip_source_t_initial_buffer, byte_sz, s_zip_source_t_initial_buffer_auto_free ? 1 : 0, &m_ze.m_zip_error);
+			m_zip_source_t_buffer = new char[byte_sz];//acquire buffer (copy)
+			char* it = std::copy(buffer, buffer + byte_sz, m_zip_source_t_buffer);
+			zipfs_internal_assert(it == m_zip_source_t_buffer + byte_sz);
+			zip_source_t* zs = zip_source_buffer_create(m_zip_source_t_buffer, byte_sz, s_zip_source_t_buffer_auto_free ? 1 : 0, &m_ze.m_zip_error);
 			if (zs == nullptr)
 				return false;
 
@@ -73,7 +73,7 @@ namespace zipfs {
 			return true;
 		}
 		else {
-			zip_source_t* zs = zip_source_buffer_create(nullptr, 0, s_zip_source_t_initial_buffer_auto_free ? 1 : 0, &m_ze.m_zip_error);
+			zip_source_t* zs = zip_source_buffer_create(nullptr, 0, s_zip_source_t_buffer_auto_free ? 1 : 0, &m_ze.m_zip_error);
 			if (zs == nullptr)
 				return false;
 
@@ -91,7 +91,7 @@ namespace zipfs {
 #endif
 		//si on utilise freep = 0, il faut supprimer le buffer avec delete[] => (mais buggé si archive créée avec WinRar)
 		//si on utilise freep = 1, il faut supprimer le buffer avec zip_source_free() [avec refcount=0]
-#if ZIPFS_ZIP_SOURCE_T_INITIAL_BUFFER_AUTO_FREE == 1
+#if ZIPFS_ZIP_SOURCE_T_BUFFER_AUTO_FREE == 1
 		(void)zip_source_free(m_zip_source_t);//ref--
 #else
 		(void)zip_source_free(m_zip_source_t);//ref-- //<-DO NOT CREATE THE ARCHIVE WITH WINRAR!! //&!zip_rename??
@@ -99,7 +99,7 @@ namespace zipfs {
 			delete[] m_zip_source_t_initial_buffer;
 #endif
 		m_zip_source_t = nullptr;
-		m_zip_source_t_initial_buffer = nullptr;
+		m_zip_source_t_buffer = nullptr;
 	}
 
 	void zipfs_t::_zipfs_error_init() {
@@ -281,7 +281,7 @@ namespace zipfs {
 		return true;
 	}
 
-	bool zipfs_t::_zipfs_zip_source_t_image_internal_revert_to_image() {
+	bool zipfs_t::_zipfs_revert_to_image_internal() {
 		zipfs_internal_assert(m_zip_t == nullptr);
 
 		_zipfs_source_free();
@@ -294,7 +294,7 @@ namespace zipfs {
 		return true;
 	}
 
-	bool zipfs_t::_zipfs_zip_source_t_image_internal_update() {
+	bool zipfs_t::_zipfs_image_internal_update() {
 		zipfs_internal_assert(m_zip_t == nullptr);
 
 		std::vector<char> buf;
@@ -388,6 +388,7 @@ namespace zipfs {
 			we could delete the file here,
 			and forward to file_add() ?
 			= less duplicate code
+			->no (~losing index)
 		*/
 
 		zip_source_t* src;
@@ -634,7 +635,8 @@ namespace zipfs {
 					}
 					else {
 
-						switch (m_file_decrypt && m_file_decrypt_func != nullptr) {
+						bool decrpt = m_file_decrypt && m_file_decrypt_func != nullptr;
+						switch (decrpt) {
 						case true: {//decryption
 							uint8_t* ret_buf = nullptr;
 							size_t ret_len;
@@ -787,7 +789,7 @@ namespace zipfs {
 		m_compression_flags = compression_flags;
 	}
 
-	zipfs_error_t zipfs_t::zip_source_t_has_modifications(bool& result) {
+	zipfs_error_t zipfs_t::zipfs_image_has_modifications(bool& result) {
 		std::vector<char> buf;
 		if (!
 			get_source(buf)) {
@@ -811,7 +813,7 @@ namespace zipfs {
 		return zipfs_error_t::no_error();
 	}
 
-	zipfs_error_t zipfs_t::zip_source_t_revert_to_image() {
+	zipfs_error_t zipfs_t::zipfs_revert_to_image() {
 		_zipfs_source_free();
 		if (!
 			_zipfs_source_new(m_zip_source_t_image_user.data(), m_zip_source_t_image_user.size()))
@@ -822,7 +824,7 @@ namespace zipfs {
 		return zipfs_error_t::no_error();
 	}
 
-	zipfs_error_t zipfs_t::zip_source_t_image_update() {
+	zipfs_error_t zipfs_t::zipfs_image_update() {
 		std::vector<char> buf;
 		if (!
 			get_source(buf))

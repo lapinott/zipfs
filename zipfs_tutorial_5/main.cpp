@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 		std::filesystem::remove_all("dir-extract-encrypted");
 		std::filesystem::create_directory("dir-extract-encrypted");
 
-		zipfs_query_result_t qr;
+		zipfs_query_results_t qr;
 		ze = zfs.dir_extract_query("/", "dir-extract-encrypted", qr);
 		if (!ze) goto error;
 		std::cout << qr << std::endl;
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 		std::filesystem::remove_all("dir-extract-decrypted");
 		std::filesystem::create_directory("dir-extract-decrypted");
 
-		zipfs_query_result_t qr;
+		zipfs_query_results_t qr;
 		ze = zfs.dir_extract_query("/", "dir-extract-decrypted", qr);
 		if (!ze) goto error;
 		std::cout << qr << std::endl;

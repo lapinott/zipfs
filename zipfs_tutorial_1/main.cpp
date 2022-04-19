@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
 		zfs.num_entries(ne);
 		assert(ne == 6);//<-files + dirs
 
-		zfs.zip_source_t_image_update();//update image
+		zfs.zipfs_image_update();//update image
 		{
 			ze = zfs.file_delete("/hello.txt");
 			if (!ze) goto error;
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {
 			zfs.num_entries(ne);
 			assert(ne == 4);
 		}
-		zfs.zip_source_t_revert_to_image();//revert to image
+		zfs.zipfs_revert_to_image();//revert to image
 
 		zfs.num_entries(ne);
 		assert(ne == 6);

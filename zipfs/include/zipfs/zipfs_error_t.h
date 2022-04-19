@@ -63,5 +63,5 @@ namespace zipfs {
 		void set_fs_path(const filesystem_path_t& p);
 	};
 
-	std::ostream& operator << (std::ostream& os, const zipfs_error_t& ze);
+	std::ostream& operator<<(std::ostream& os, const zipfs_error_t& ze);
 }

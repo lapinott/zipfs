@@ -14,7 +14,6 @@ namespace zipfs {
 		if (zip_error->str != nullptr) {
 			m_zip_error.str = (char*)malloc(strlen(zip_error->str));
 			std::copy(zip_error->str, zip_error->str + strlen(zip_error->str), m_zip_error.str);
-			//strcpy(m_zip_error.str, zip_error->str);
 		}
 	}
 
@@ -115,7 +114,7 @@ namespace zipfs {
 	}
 
 	zipfs_error_t zipfs_error_t::no_error() {
-		return std::move(zipfs_error_t());
+		return zipfs_error_t{};
 	}
 
 	void zipfs_error_t::set_zipfs_path(const zipfs_path_t& p) {
@@ -128,7 +127,7 @@ namespace zipfs {
 		m_filesystem_path = p;
 	}
 
-	std::ostream& operator << (std::ostream& os, const zipfs_error_t& ze) {
+	std::ostream& operator<<(std::ostream& os, const zipfs_error_t& ze) {
 		os << (std::string)ze;
 		return os;
 	}

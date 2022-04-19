@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 		std::filesystem::remove_all("dir-extract");
 		std::filesystem::create_directory("dir-extract");
 
-		zipfs_query_result_t qr;
+		zipfs_query_results_t qr;
 		ze = zfs.dir_extract_query("/", "dir-extract", qr, zipfs::OVERWRITE::NEVER);
 		if (!ze) goto error;
 		std::cout << std::endl << "query results:" << std::endl;
@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
 
 		//now lets modify a file and run a query
 		ze = zfs.file_add_replace(u8"/nested 🐦/sub1/sub2/😎.txt", "new contents");
+		std::cout << std::endl << u8"we modified /nested 🐦/sub1/sub2/😎.txt" << std::endl;
 		ze = zfs.dir_extract_query("/", "dir-extract", qr, zipfs::OVERWRITE::IF_SIZE_MISMATCH);//should mark the modified file to be overwritten
 		if (!ze) goto error;
 		std::cout << std::endl << "query results:" << std::endl;

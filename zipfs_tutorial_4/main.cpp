@@ -63,10 +63,9 @@ int main(int argc, char** argv) {
 
 	//§3 dir_pull_query & dir_pull; the query will show us what will take place before we decide to commit
 	{
-		zipfs_query_result_t qr;
+		zipfs_query_results_t qr;
 		ze = zfs.dir_pull_query("/dir-pull/", "../zipfs_tutorial_3/dir-extract", qr, zipfs::OVERWRITE::NEVER, zipfs::ORPHAN::KEEP);
 		if (!ze) goto error;
-		std::cout << std::endl << "query results:" << std::endl;
 		std::cout << qr << std::endl;
 
 		if (commit_ask()) {
