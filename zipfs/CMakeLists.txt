@@ -8,6 +8,7 @@ set(ZIPFS_PUBLIC_HEADERS
 	"include/zipfs/zipfs_index_t.h"
 	"include/zipfs/zipfs_path_t.h"
 	"include/zipfs/zipfs_query_result_t.h"
+	"include/zipfs/zipfs_query_results_t.h"
 	"include/zipfs/zipfs_t.h"
 	"include/zipfs/zipfs_zip_stat_t.h")
 	
