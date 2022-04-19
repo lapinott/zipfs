@@ -300,8 +300,8 @@ namespace zipfs {
 				return false;
 			}
 
-			std::ios::openmode open_mode = std::ios::binary |
-				(qr == QUERY_RESULT::FILE_OVERWRITE ? std::ios::trunc : NULL);
+			std::ios::openmode open_mode = std::ios::binary;
+			if (qr == QUERY_RESULT::FILE_OVERWRITE) open_mode |= std::ios::trunc;
 
 			zipfs_zip_stat_t stat_;
 			std::vector<char> buf;
