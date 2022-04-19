@@ -47,12 +47,12 @@ int main(int argc, char** argv) {
 	zfs.set_compression(ZIP_CM_STORE, ZIPFS_ZIP_FLAGS_NONE);//https://libzip.org/documentation/zip_set_file_compression.html
 
 	zipfs_query_results_t qr;
-	ze = zfs.dir_pull_query("/", mirroring, qr, zipfs::OVERWRITE::IF_DATE_OLDER, zipfs::ORPHAN::DELETE_);
+	ze = zfs.dir_pull_query("/", mirroring, qr, zipfs::OVERWRITE::IF_DATE_OLDER_AND_SIZE_MISMATCH, zipfs::ORPHAN::DELETE_);
 	if (!ze)
 		return -1;
 	std::cout << qr << std::endl;
 
-	ze = zfs.dir_pull("/", mirroring, zipfs::OVERWRITE::IF_DATE_OLDER, zipfs::ORPHAN::DELETE_);
+	ze = zfs.dir_pull("/", mirroring, zipfs::OVERWRITE::IF_DATE_OLDER_AND_SIZE_MISMATCH, zipfs::ORPHAN::DELETE_);
 	if (!ze)
 		return -1;
 
