@@ -4,7 +4,7 @@
 	We will use the files created in zipfs_tutorial_3
 
 	- §1 file_pull
-	- §2 file_pull_replace
+	- §2 file_pull replace
 	- §3 dir_pull_query & dir_pull
 	- §4 write archive to HDD
 */
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
 	//§1 file_pull
 	{
-		ze = zfs.file_pull("/let's/pull/here/hello.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt");//<-will create tree
+		ze = zfs.file_pull("/let's/pull/here/hello.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt");//<-will create dir tree
 		if (!ze) goto error;
 
 		ze = zfs.file_pull(u8"/let's/pull/here/😎😎.txt", u8"../zipfs_tutorial_3/file-extract/😎.txt");
@@ -46,18 +46,18 @@ int main(int argc, char** argv) {
 			std::cout << " " << p << std::endl;
 	}
 
-	//§2 file_pull_replace
+	//§2 file_pull replace
 	{
-		ze = zfs.file_pull_replace("/there/is/no/file/here.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt");
+		ze = zfs.file_pull("/there/is/no/file/here.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt", OVERWRITE::ALWAYS);
 		std::cout << ze << std::endl;
 
-		ze = zfs.file_pull_replace("/let's/pull/here/hello.txt", "../neither/here.txt");
+		ze = zfs.file_pull("/let's/pull/here/hello.txt", "../neither/here.txt", OVERWRITE::ALWAYS);
 		std::cout << ze << std::endl;
 
-		ze = zfs.file_pull_replace("/let's/pull/here/hello.txt", u8"../zipfs_tutorial_3/file-extract/😎.txt");
+		ze = zfs.file_pull("/let's/pull/here/hello.txt", u8"../zipfs_tutorial_3/file-extract/😎.txt", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
 
-		ze = zfs.file_pull_replace(u8"/let's/pull/here/😎😎.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt");
+		ze = zfs.file_pull(u8"/let's/pull/here/😎😎.txt", "../zipfs_tutorial_3/file-extract/hello_renamed.txt", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
 	}
 

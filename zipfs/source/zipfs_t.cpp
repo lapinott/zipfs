@@ -309,129 +309,79 @@ namespace zipfs {
 		return true;
 	}
 
-	zipfs_error_t zipfs_t::file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer) {
+	bool zipfs_t::_zipfs_file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer, QUERY_RESULT qr) {
+		switch (qr) {
+		case QUERY_RESULT::FILE_WRITE:
+		case QUERY_RESULT::FILE_OVERWRITE: {
+
+			if (qr == QUERY_RESULT::FILE_WRITE && !dir_add(zipfs_path.parent_path()) || !_zipfs_open(ZIPFS_ZIP_FLAGS_NONE)) {
+				return false;
+			}
+			zip_int64_t index_ = _zipfs_name_locate(zipfs_path);
+
+			zip_source_t* src;
+			bool buffer_encrypt = m_file_encrypt && m_file_encrypt_func != nullptr;
+
+			if (buffer_encrypt) {
+				_zipfs_source_buffer_encrypt(zipfs_path, buffer, &src);
+			}
+			else {
+				src = zip_source_buffer(m_zip_t, buffer.data(), buffer.size(), 0);//0 = don't auto free the std::vector<char>& buffer
+			}
+
+			if (src == nullptr) {
+				_zipfs_unchange_all();
+				_zipfs_zip_get_error_and_close("/", "");//.>buffer error
+				return false;
+			}
+
+			bool from_source;
+			switch (qr) {
+			case QUERY_RESULT::FILE_WRITE: {
+				from_source = _zipfs_file_add_or_pull_from_source(zipfs_path, src, index_);
+				break;
+			}
+			case QUERY_RESULT::FILE_OVERWRITE: {
+				from_source = _zipfs_file_add_replace_or_pull_replace_from_source(index_, src);
+				break;
+			}
+			}
+			if (!from_source) {
+				_zipfs_unchange_all();
+				_zipfs_zip_get_error_and_close(zipfs_path, "");
+				return false;
+			}
+
+			_zipfs_no_error_and_close();
+			break;
+		}
+		case QUERY_RESULT::FILE_DONT_OVERWRITE:
+		case QUERY_RESULT::DISCARD:
+		case QUERY_RESULT::NONE: {//nothing to do
+			break;
+		}
+		default: {//not supposed to reach here.
+			zipfs_internal_assert(false);
+		}
+		}
+
+		return true;
+	}
+
+	zipfs_error_t zipfs_t::file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer, OVERWRITE overwrite) {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
-		if (!
-			dir_add(zipfs_path.parent_path()))
-			return m_ze;
-
-		if (!
-			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
-			return m_ze;
-
-		zip_int64_t index = _zipfs_name_locate(zipfs_path);
-		if (index != -1) {
-			_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_TARGET_FILE_ALREADY_EXISTS, zipfs_path, "");
-			return m_ze;
-		}
-
-		zip_source_t* src;
-		if (m_file_encrypt && m_file_encrypt_func != nullptr)
-			goto source_buffer_encrypt;
-		else
-			goto source_buffer;
-
-	source_buffer_encrypt:
-		{
-			_zipfs_source_buffer_encrypt(zipfs_path, buffer, &src);
-			goto source_finish;
-		}
-
-	source_buffer:
-		{
-			src = zip_source_buffer(m_zip_t, buffer.data(), buffer.size(), 0);//pas de auto-free ici (buffer est std::vector<char>)
-			goto source_finish;
-		}
-
-	source_finish:
-		{
-			if (src == nullptr) {
-				_zipfs_unchange_all();//.>mkdir revert
-				_zipfs_zip_get_error_and_close("/", "");//.>buffer error
-				return m_ze;
-			}
-
-			if (!_zipfs_file_add_or_pull_from_source(zipfs_path, src, index)) {
-				_zipfs_unchange_all();//.>mkdir revert
-				_zipfs_zip_get_error_and_close("/", "");//.>buffer error
-				return m_ze;
-			}
-			goto end;
-		}
-
-	end:
-		_zipfs_no_error_and_close();
+		QUERY_RESULT qr = _zipfs_get_query_result(overwrite, zipfs_path);
+		_zipfs_file_add(zipfs_path, buffer, qr);
 		return m_ze;
 	}
 
-	zipfs_error_t zipfs_t::file_add(const zipfs_path_t& zipfs_path, const std::string& buffer) {
+	zipfs_error_t zipfs_t::file_add(const zipfs_path_t& zipfs_path, const std::string& buffer, OVERWRITE overwrite) {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
-		return file_add(zipfs_path, std::vector<char>{ buffer.begin(), buffer.end() });
-	}
-
-	zipfs_error_t zipfs_t::file_add_replace(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer) {
-		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
-
-		if (!
-			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
-			return m_ze;
-
-		zip_int64_t index = _zipfs_name_locate(zipfs_path);
-		if (index == -1) {
-			_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_TARGET_FILE_DOESNT_EXIST, zipfs_path, "");
-			return m_ze;
-		}
-
-		/*
-			we could delete the file here,
-			and forward to file_add() ?
-			= less duplicate code
-			->no (~losing index)
-		*/
-
-		zip_source_t* src;
-		if (m_file_encrypt && m_file_encrypt_func != nullptr)
-			goto source_buffer_encrypt;
-		else
-			goto source_buffer;
-
-	source_buffer_encrypt:
-		{
-			_zipfs_source_buffer_encrypt(zipfs_path, buffer, &src);
-			goto source_finish;
-		}
-
-	source_buffer:
-		{
-			src = zip_source_buffer(m_zip_t, buffer.data(), buffer.size(), 0);//pas de auto-free ici (buffer est std::vector<char>)
-			goto source_finish;
-		}
-
-	source_finish:
-		{
-			if (src == nullptr) {
-				_zipfs_zip_get_error_and_close("/", "");//.>buffer error
-				return m_ze;
-			}
-
-			if (!_zipfs_file_add_replace_or_pull_replace_from_source(index, src)) {
-				_zipfs_zip_get_error_and_close("/", "");//.>buffer error
-				return m_ze;
-			}
-			goto end;
-		}
-
-	end:
-		_zipfs_no_error_and_close();
+		QUERY_RESULT qr = _zipfs_get_query_result(overwrite, zipfs_path);
+		_zipfs_file_add(zipfs_path, std::vector<char>{ buffer.begin(), buffer.end() }, qr);
 		return m_ze;
-	}
-
-	zipfs_error_t zipfs_t::file_add_replace(const zipfs_path_t& zipfs_path, const std::string& buffer) {
-		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
-
-		return file_add_replace(zipfs_path, std::vector<char>{ buffer.begin(), buffer.end() });
 	}
 
 	zipfs_error_t zipfs_t::file_delete(const zipfs_path_t& zipfs_path) {

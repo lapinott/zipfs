@@ -51,16 +51,13 @@ int main(int argc, char** argv) {
 		std::cout << ze << std::endl;
 	}
 
-	//§2 file_extract_replace
+	//§2 file_extract replace
 	{
-		ze = zfs.file_extract_replace(u8"/nested 🐦/sub1/sub2/😎.txt", "file-extract/hello_renamed.txt");
+		ze = zfs.file_extract(u8"/nested 🐦/sub1/sub2/😎.txt", "file-extract/hello_renamed.txt", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
 
-		ze = zfs.file_extract_replace("/hello/hello_renamed.txt", u8"file-extract/😎.txt");
+		ze = zfs.file_extract("/hello/hello_renamed.txt", u8"file-extract/😎.txt", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
-
-		ze = zfs.file_extract_replace("/hello/hello_renamed.txt", "file-extract/doesn't exist.txt");//<-doesn't exist
-		std::cout << ze << std::endl;
 	}
 
 	//§3 dir_extract_query& dir_extract; the query will show us what will take place before we decide to commit
@@ -105,7 +102,7 @@ int main(int argc, char** argv) {
 		}
 
 		//now lets modify a file and run a query
-		ze = zfs.file_add_replace(u8"/nested 🐦/sub1/sub2/😎.txt", "new contents");
+		ze = zfs.file_add(u8"/nested 🐦/sub1/sub2/😎.txt", "new contents", OVERWRITE::ALWAYS);
 		std::cout << std::endl << u8"we modified /nested 🐦/sub1/sub2/😎.txt" << std::endl;
 		ze = zfs.dir_extract_query("/", "dir-extract", qr, zipfs::OVERWRITE::IF_SIZE_MISMATCH);//should mark the modified file to be overwritten
 		if (!ze) goto error;

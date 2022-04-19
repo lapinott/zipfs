@@ -71,13 +71,9 @@ namespace zipfs {
 		{
 			for (const auto& qr : query_results_.m_query_results) {
 				switch (qr.query_result) {
-				case QUERY_RESULT::FILE_WRITE: {
-					if (!file_pull(qr.zipfs_path, qr.fs_path_cmp))
-						goto abort;
-					break;
-				}
+				case QUERY_RESULT::FILE_WRITE:
 				case QUERY_RESULT::FILE_OVERWRITE: {
-					if (!file_pull_replace(qr.zipfs_path, qr.fs_path_cmp))
+					if (!_zipfs_file_pull(qr.zipfs_path, qr.fs_path_cmp, qr.query_result))
 						goto abort;
 					break;
 				}
@@ -189,13 +185,9 @@ namespace zipfs {
 						goto abort;
 					break;
 				}
-				case QUERY_RESULT::FILE_WRITE: {
-					if (!file_extract(qr.zipfs_path_cmp, qr.fs_path))
-						goto abort;
-					break;
-				}
+				case QUERY_RESULT::FILE_WRITE:
 				case QUERY_RESULT::FILE_OVERWRITE: {
-					if (!file_extract_replace(qr.zipfs_path_cmp, qr.fs_path))
+					if (!_zipfs_file_extract(qr.zipfs_path_cmp, qr.fs_path, qr.query_result))
 						goto abort;
 					break;
 				}
@@ -226,142 +218,127 @@ namespace zipfs {
 		return true;
 	}
 
-	bool zipfs_t::_zipfs_source_buffer_encrypt(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zip_source_t** src) {
-		return _zipfs_source_buffer_encrypt(zipfs_path, fs_path.cat(), src);
-	}
+	bool zipfs_t::_zipfs_file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, QUERY_RESULT qr) {
+		switch (qr) {
+		case QUERY_RESULT::FILE_WRITE:
+		case QUERY_RESULT::FILE_OVERWRITE: {
 
-	zipfs_error_t zipfs_t::file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
-		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
+			if (qr == QUERY_RESULT::FILE_WRITE && !dir_add(zipfs_path.parent_path()) || !_zipfs_open(ZIPFS_ZIP_FLAGS_NONE)) {
+				return false;
+			}
+			zip_int64_t index_ = _zipfs_name_locate(zipfs_path);
 
-		if (!fs_path.is_regular_file()) {
-			_zipfs_zipfs_set_error(ZIPFS_ERRSTR_FS_PATH_NOT_A_REGULAR_FILE, "/", fs_path);//->usage_assert
-			return m_ze;
-		}
+			zip_source_t* src;
+			bool from_buffer = m_file_encrypt && m_file_encrypt_func != nullptr;
 
-		if (!
-			dir_add(zipfs_path.parent_path()))
-			return m_ze;
+			if (from_buffer) {
+				_zipfs_source_buffer_encrypt(zipfs_path, fs_path.cat(), &src);
+			}
+			else {
+				src = zip_source_file(m_zip_t, fs_path.u8path().c_str(), 0, -1);//takes care of mtime
+			}
 
-		if (!
-			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
-			return m_ze;
-
-		zip_int64_t index = _zipfs_name_locate(zipfs_path);
-		if (index != -1) {
-			_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_FILE_ALREADY_EXISTS, zipfs_path, "");
-			return m_ze;
-		}
-
-		zip_source_t* src;
-		if (m_file_encrypt && m_file_encrypt_func != nullptr)
-			goto source_buffer_encrypt;
-		else
-			goto source_file;
-
-	source_buffer_encrypt: //using <filesystem> to read file data and then encrypt them
-		{
-			_zipfs_source_buffer_encrypt(zipfs_path, fs_path, &src);
-			goto source_finish;
-		}
-
-	source_file: //using built-in zip_source_file()
-		{
-			src = zip_source_file(m_zip_t, fs_path.u8path().c_str(), 0, -1);//sets mtime
-			goto source_finish;
-		}
-
-	source_finish:
-		{
 			if (src == nullptr) {
-				_zipfs_unchange_all();//.>mkdir revert
-				_zipfs_zip_get_error_and_close("", fs_path);
-				return m_ze;
+				_zipfs_unchange_all();
+				_zipfs_zip_get_error_and_close("/", fs_path);
+				return false;
 			}
 
-			if (!_zipfs_file_add_or_pull_from_source(zipfs_path, src, index)) {
-				_zipfs_unchange_all();//.>mkdir revert
+			bool from_source;
+			switch (qr) {
+			case QUERY_RESULT::FILE_WRITE: {
+				from_source = _zipfs_file_add_or_pull_from_source(zipfs_path, src, index_);
+				break;
+			}
+			case QUERY_RESULT::FILE_OVERWRITE: {
+				from_source = _zipfs_file_add_replace_or_pull_replace_from_source(index_, src);
+				break;
+			}
+			}
+			if (!from_source) {
+				_zipfs_unchange_all();
 				_zipfs_zip_get_error_and_close(zipfs_path, "");
-				return m_ze;
+				return false;
 			}
-			goto mtime;
-		}
 
-	mtime:
-		{
-			if (m_file_encrypt && m_file_encrypt_func != nullptr) {//zip_source_buffer was used
+			/*
+				set mtime if zip_source_buffer was used
+			*/
+			if (from_buffer) {
 				time_t fs_mtime = fs_path.last_write_time();
-				if (zip_file_set_mtime(m_zip_t, index, fs_mtime, ZIPFS_ZIP_FLAGS_NONE) == -1) {
+				if (zip_file_set_mtime(m_zip_t, index_, fs_mtime, ZIPFS_ZIP_FLAGS_NONE) == -1) {
 					_zipfs_zip_get_error_and_close(zipfs_path, "");
-					return m_ze;
+					return false;
 				}
 			}
-			goto end;
+
+			_zipfs_no_error_and_close();
+			break;
+		}
+		case QUERY_RESULT::FILE_ORPHAN_KEEP:
+		case QUERY_RESULT::FILE_DONT_OVERWRITE:
+		case QUERY_RESULT::FILE_IS_BUT_NOT_FILE:
+		case QUERY_RESULT::DISCARD:
+		case QUERY_RESULT::NONE: {//nothing to do
+			break;
+		}
+		default: {//not supposed to reach here.
+			zipfs_internal_assert(false);
+		}
 		}
 
-	end:
-		_zipfs_no_error_and_close();
-		return m_ze;
+		return true;
 	}
 
-	zipfs_error_t zipfs_t::file_pull_replace(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
+	bool zipfs_t::_zipfs_file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, QUERY_RESULT qr) {
+		switch (qr) {
+		case QUERY_RESULT::FILE_WRITE:
+		case QUERY_RESULT::FILE_OVERWRITE: {
+
+			if (qr == QUERY_RESULT::FILE_WRITE && !fs_path.parent_path().exists() && !std::filesystem::create_directories(fs_path.parent_path().platform_path())) {
+				_zipfs_zipfs_set_error("could not create parent directory.", "/", fs_path.parent_path().u8path());
+				return false;
+			}
+
+			std::ios::openmode open_mode = std::ios::binary |
+				(qr == QUERY_RESULT::FILE_OVERWRITE ? std::ios::trunc : NULL);
+
+			zipfs_zip_stat_t stat_;
+			std::vector<char> buf;
+			if (!cat(zipfs_path, buf)) {
+				return false;
+			}
+			else if (!stat(zipfs_path, stat_)) {
+				return false;
+			}
+			else if (!fs_path.cat(buf, open_mode)) {//write
+				m_ze = ZIPFS_ERRSTR_ERROR_WRITING_TO_OUTPUT_FILE;
+				m_ze.set_fs_path(fs_path);
+				return false;
+			}
+			else if (!fs_path.last_write_time(stat_.mtime)) {//mtime
+				zipfs_debug_assert(false);
+			}
+
+			break;
+		}
+		case QUERY_RESULT::FILE_ORPHAN_KEEP:
+		case QUERY_RESULT::FILE_DONT_OVERWRITE:
+		case QUERY_RESULT::FILE_IS_BUT_NOT_FILE:
+		case QUERY_RESULT::DISCARD:
+		case QUERY_RESULT::NONE: {//nothing to do
+			break;
+		}
+		}
+
+		return true;
+	}
+
+	zipfs_error_t zipfs_t::file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite) {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
-		if (!fs_path.is_regular_file()) {
-			_zipfs_zipfs_set_error(ZIPFS_ERRSTR_FS_PATH_NOT_A_REGULAR_FILE, "/", fs_path);//->usage_assert
-			return m_ze;
-		}
-
-		if (!
-			_zipfs_open(ZIPFS_ZIP_FLAGS_NONE))
-			return m_ze;
-
-		zip_int64_t index = _zipfs_name_locate(zipfs_path);
-		if (index == -1) {
-			_zipfs_zipfs_set_error_and_close(ZIPFS_ERRSTR_CANNOT_LOCATE_NAME, zipfs_path, "");
-			return m_ze;
-		}
-
-		/*
-			we could delete the file here,
-			and forward to file_pull() ?
-			= less duplicate code
-			->no (~losing index)
-		*/
-
-		zip_source_t* src;
-		if (m_file_encrypt && m_file_encrypt_func != nullptr)
-			goto source_buffer_encrypt;
-		else
-			goto source_file;
-
-	source_buffer_encrypt: //using <filesystem> to read file data and then encrypt them
-		{
-			_zipfs_source_buffer_encrypt(zipfs_path, fs_path, &src);
-			goto source_finish;
-		}
-
-	source_file: //using built-in zip_source_file()
-		{
-			src = zip_source_file(m_zip_t, fs_path.u8path().c_str(), 0, -1);
-			goto source_finish;
-		}
-
-	source_finish:
-		{
-			if (src == nullptr) {
-				_zipfs_zip_get_error_and_close("", fs_path);
-				return m_ze;
-			}
-
-			if (!_zipfs_file_add_replace_or_pull_replace_from_source(index, src)) {
-				_zipfs_zip_get_error_and_close(zipfs_path, "");
-				return m_ze;
-			}
-			goto end;
-		}
-
-	end:
-		_zipfs_no_error_and_close();
+		QUERY_RESULT qr = _zipfs_get_query_result(overwrite, ORPHAN::KEEP, zipfs_path, fs_path);
+		_zipfs_file_pull(zipfs_path, fs_path, qr);
 		return m_ze;
 	}
 
@@ -370,7 +347,7 @@ namespace zipfs {
 			_zipfs_image_internal_update())//make source backup
 			return m_ze;
 
-		if (!//should be try/catch
+		if (!
 			_zipfs_dir_pull(zipfs_path, fs_path, nullptr, overwrite, orphan, false)) {
 
 			_zipfs_revert_to_image_internal();//restore image
@@ -391,75 +368,13 @@ namespace zipfs {
 		return m_ze;
 	}
 
-	zipfs_error_t zipfs_t::file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
+	zipfs_error_t zipfs_t::file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite) {
 		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
 
-		if (fs_path.exists()) {
-			_zipfs_zipfs_set_error(ZIPFS_ERRSTR_TARGET_FILE_ALREADY_EXISTS, "/", fs_path);//->usage_assert
-			return m_ze;
-		}
-
-		if (!fs_path.parent_path().exists()) {
-			std::filesystem::create_directories(fs_path.parent_path().platform_path());
-		}
-
-		zipfs_zip_stat_t stat_;
-		std::vector<char> buf;
-		if (!cat(zipfs_path, buf)) {
-			return m_ze;
-		}
-		else if (!stat(zipfs_path, stat_)) {
-			return m_ze;
-		}
-		else if (!fs_path.cat(buf)) {//write
-			m_ze = ZIPFS_ERRSTR_ERROR_WRITING_TO_OUTPUT_FILE;
-			m_ze.set_fs_path(fs_path);
-			return m_ze;
-		}
-		else if (!fs_path.last_write_time(stat_.mtime)) {//mtime
-			zipfs_debug_assert(false);
-		}
-
-		zipfs_internal_assert(!m_ze.is_error());
+		QUERY_RESULT qr = _zipfs_get_query_result(overwrite, fs_path, zipfs_path);
+		_zipfs_file_extract(zipfs_path, fs_path, qr);
 		return m_ze;
 	}
-
-	zipfs_error_t zipfs_t::file_extract_replace(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path) {
-		zipfs_usage_assert(zipfs_path.is_file(), ZIPFS_ERRSTR_FILE_PATH_EXPECTED);
-
-		if (!fs_path.exists()) {
-			_zipfs_zipfs_set_error(ZIPFS_ERRSTR_TARGET_FILE_DOESNT_EXIST, "/", fs_path);//->usage_assert
-			return m_ze;
-		}
-
-		/*
-			we could delete the file here,
-			and forward to file_extract() ?
-			= less duplicate code
-			yes! good for file EXTRACT. (not good for file_pull cos index)
-		*/
-
-		zipfs_zip_stat_t stat_;
-		std::vector<char> buf;
-		if (!cat(zipfs_path, buf)) {
-			return m_ze;
-		}
-		else if (!stat(zipfs_path, stat_)) {
-			return m_ze;
-		}
-		else if (!fs_path.cat(buf, std::ios::binary | std::ios::trunc)) {//write
-			m_ze = ZIPFS_ERRSTR_ERROR_WRITING_TO_OUTPUT_FILE;
-			m_ze.set_fs_path(fs_path);
-			return m_ze;
-		}
-		else if (!fs_path.last_write_time(stat_.mtime)) {//mtime
-			zipfs_debug_assert(false);
-		}
-
-		zipfs_internal_assert(!m_ze.is_error());
-		return m_ze;
-	}
-
 
 	zipfs_error_t zipfs_t::dir_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite) {
 		if (!//should be try/catch

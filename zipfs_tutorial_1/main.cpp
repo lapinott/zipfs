@@ -2,7 +2,7 @@
 	zipfs_tutorial_1 - *write* memory operations
 
 	- §1 file_add
-	- §2 file_add_replace
+	- §2 file_add replace
 	- §3 file_delete
 	- §4 file_rename
 	- §5 dir_add
@@ -51,10 +51,10 @@ int main(int argc, char** argv) {
 		std::cout << ze << std::endl;
 	}
 
-	//§2 file_add_replace
+	//§2 file_add replace
 	{
 		//from string
-		ze = zfs.file_add_replace("/hello.txt", "hello world");
+		ze = zfs.file_add("/hello.txt", "hello world", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
 
 		//from data
@@ -63,16 +63,12 @@ int main(int argc, char** argv) {
 			0x94, 0xd4, 0x44, 0xcf, 0xc5, 0x42, 0xfe, 0xfb, 0xb7, 0xb5, 0x66, 0xb8, 0x84, 0x4a, 0x48, 0x50,
 		};
 		std::vector<char> buf{ data, data + sizeof(data) };
-		ze = zfs.file_add_replace("/hello.bin", buf);
+		ze = zfs.file_add("/hello.bin", buf, OVERWRITE::ALWAYS);
 		if (!ze) goto error;
 
 		//nested + utf8
-		ze = zfs.file_add_replace(u8"/nested/sub1/sub2/😎.txt", u8"😏😏");
+		ze = zfs.file_add(u8"/nested/sub1/sub2/😎.txt", u8"😏😏", OVERWRITE::ALWAYS);
 		if (!ze) goto error;
-
-		//doesn't exist
-		ze = zfs.file_add_replace("/not-a-file.txt", "");
-		std::cout << ze << std::endl;
 	}
 
 	//&3 file_delete (with source image backup and restore)

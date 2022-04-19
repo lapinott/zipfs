@@ -121,19 +121,14 @@ namespace zipfs {
 			_zipfs_name_locate(const zipfs_path_t& zipfs_path);
 
 		bool
-			_zipfs_file_add_or_pull_from_source(const zipfs_path_t& zipfs_path, zip_source_t* src, zip_int64_t& index);
-
-		bool
+			_zipfs_file_add_or_pull_from_source(const zipfs_path_t& zipfs_path, zip_source_t* src, zip_int64_t& index),
 			_zipfs_file_add_replace_or_pull_replace_from_source(zip_int64_t index, zip_source_t* src);
 
 		bool
-			_zipfs_dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t* query_results, OVERWRITE overwrite, ORPHAN orphan, bool is_query);
-
-		bool
+			_zipfs_dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t* query_results, OVERWRITE overwrite, ORPHAN orphan, bool is_query),
 			_zipfs_dir_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zipfs_query_results_t* query_results, OVERWRITE overwrite, bool is_query);
 
 		bool
-			_zipfs_source_buffer_encrypt(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, zip_source_t** src),
 			_zipfs_source_buffer_encrypt(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer, zip_source_t** src);
 
 		bool
@@ -144,8 +139,14 @@ namespace zipfs {
 			_zipfs_image_internal_update();
 
 		QUERY_RESULT
-			_zipfs_get_query_result(OVERWRITE overwrite, ORPHAN orphan, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),
-			_zipfs_get_query_result(OVERWRITE overwrite, const filesystem_path_t& fs_path, const zipfs_path_t& zipfs_path);
+			_zipfs_get_query_result(OVERWRITE overwrite, ORPHAN orphan, const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path),//pull
+			_zipfs_get_query_result(OVERWRITE overwrite, const filesystem_path_t& fs_path, const zipfs_path_t& zipfs_path),//extract
+			_zipfs_get_query_result(OVERWRITE overwrite, const zipfs_path_t& zipfs_path);//add
+
+		bool
+			_zipfs_file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, QUERY_RESULT qr),
+			_zipfs_file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, QUERY_RESULT qr),
+			_zipfs_file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer, QUERY_RESULT qr);
 
 	//\.end internal
 
@@ -155,10 +156,7 @@ namespace zipfs {
 	public: //.>write operations [<-filesystem]
 
 		zipfs_error_t
-			file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
-
-		zipfs_error_t //this will be removed and an OVERWRITE flag added to file_pull (maybe...)
-			file_pull_replace(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
+			file_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite = OVERWRITE::NEVER);
 
 		zipfs_error_t
 			dir_pull(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite = OVERWRITE::NEVER, ORPHAN orphan = ORPHAN::KEEP);
@@ -170,10 +168,7 @@ namespace zipfs {
 	public: //.>read-only operations [->filesystem]
 
 		zipfs_error_t
-			file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
-
-		zipfs_error_t //this will be removed and an OVERWRITE flag added to file_extract (maybe...)
-			file_extract_replace(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path);
+			file_extract(const zipfs_path_t& zipfs_path, const filesystem_path_t& fs_path, OVERWRITE overwrite = OVERWRITE::NEVER);
 
 		/*
 			implementing an ORPHAN flag here is probably not a good idea...
@@ -188,12 +183,8 @@ namespace zipfs {
 	public: //.>write operations [<-memory]
 
 		zipfs_error_t
-			file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer),
-			file_add(const zipfs_path_t& zipfs_path, const std::string& buffer);
-
-		zipfs_error_t //this will be removed and an OVERWRITE flag added to file_add (maybe...)
-			file_add_replace(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer),
-			file_add_replace(const zipfs_path_t& zipfs_path, const std::string& buffer);
+			file_add(const zipfs_path_t& zipfs_path, const std::vector<char>& buffer, OVERWRITE overwrite = OVERWRITE::NEVER),
+			file_add(const zipfs_path_t& zipfs_path, const std::string& buffer, OVERWRITE overwrite = OVERWRITE::NEVER);
 
 		zipfs_error_t
 			file_delete(const zipfs_path_t& zipfs_path);
