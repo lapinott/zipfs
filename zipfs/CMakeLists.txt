@@ -18,6 +18,7 @@ set(ZIPFS_SOURCE_FILES
 	"source/zipfs_index_t.cpp"
 	"source/zipfs_path_t.cpp"
 	"source/zipfs_query_result_t.cpp"
+	"source/zipfs_query_results_t.cpp"
 	"source/zipfs_t.cpp"
 	"source/zipfs_t_filesystem.cpp"
 	"source/zipfs_zip_stat_t.cpp")
