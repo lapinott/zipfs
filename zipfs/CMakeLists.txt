@@ -21,6 +21,7 @@ set(ZIPFS_SOURCE_FILES
 	"source/zipfs_query_results_t.cpp"
 	"source/zipfs_t.cpp"
 	"source/zipfs_t_filesystem.cpp"
+	"source/zipfs_t_filesystem_query.cpp"
 	"source/zipfs_zip_stat_t.cpp")
 
 #source
